@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <style>
+    /* 外部全局样式（演示样式隔离） */
+    div {
+      background: red;
+      display: inline-block;
+      width: 100px;
+      height: 100px;
+    }
+  </style>
+</head>
+
+<body>
+  <div>外部元素</div>
+  <!-- 使用自定义按钮 -->
+  <advanced-button bg="blue">
+    <span slot="start-icon">🚀</span>
+    <span slot="text">提交</span>
+  </advanced-button>
+  <script>
+    class AdvancedButton extends HTMLElement {
+      constructor() {
+        super();
+        // 创建 Shadow DOM
+        const shadowRoot = this.attachShadow({ mode: 'open' });
+        // 组件模板
+        shadowRoot.innerHTML = `
+              <style>
+                :host {
+                  --blue-color: #007bff;
+                  --green-color: #28a745;
+                  display: inline-block;
+                  border-radius: 4px;
+                }
+                :host([bg="blue"]) {
+                  background-color: var(--blue-color);
+                }
+                :host([bg="green"]) {
+                  background-color: var(--green-color);
+                }
+                slot[name="start-icon"]::slotted(span) {
+                  margin-right: 4px;
+                }
+                .button {
+                  padding: 4px;
+                  color: #FFF;
+                  font-size: 12px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                }
+              </style>
+
+              <div class="button">
+                <slot name="start-icon"></slot>
+                <slot name="text"></slot>
+              </div>
+            `
+        // button 元素
+        this.button = shadowRoot.querySelector('.button');
+        // 监听点击事件
+        this.button.addEventListener('click', () => {
+          // this 指向当前组件, 需要使用this.button, composed为false时，才能阻止事件穿透Shadow DOM
+          this.button.dispatchEvent(
+            new CustomEvent('button-click', {
+              detail: { bg: this.getAttribute('bg') },
+              bubbles: true,  // 允许事件冒泡
+              composed: true  // 允许事件穿透 Shadow DOM
+            })
+          );
+        });
+      }
+    }
+    // 定义button元素
+    customElements.define('advanced-button', AdvancedButton);
+
+    // 监听 button-click 事件
+    const btnDom = document.querySelector('advanced-button');
+    btnDom.addEventListener('button-click', (e) => {
+      console.log('advanced-button, bg color is:', e.detail.bg, e);
+      e.target.setAttribute('bg', e.detail.bg === 'blue' ? 'green' : 'blue');
+    });
+    document.body.addEventListener('button-click', (e) => {
+      console.log('body dom, bg color is:', e.detail.bg, e);
+    });
+  </script>
+</body>
+
+</html>
